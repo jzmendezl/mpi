@@ -2,24 +2,30 @@
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
+#include <string.h>
 
-#define COLS1 2000
-#define ROWS1 2000
-#define COLS2 2000
-#define ROWS2 2000
+// #define COLS1 2000
+// #define ROWS1 2000
+// #define COLS2 2000
+// #define ROWS2 2000
 
 void viewMatrix(int *Matrix, int cols, int rows);
 
 using namespace std;
 
-int main(void)
+int main(int argc, char **argv)
 {
+    char *size_mat = (char *)malloc(4 * sizeof(char));
+    strcat(size_mat, argv[1]);
+    int N = atoi(size_mat);
+    printf("%d\n", N);
+    int COLS1 = N, ROWS1 = N, COLS2 = N, ROWS2 = N;
+
     if (ROWS1 != COLS2)
     {
         cout << "Invalid Dimension" << endl;
         return 0;
     }
-    
 
     srand(30);
 
