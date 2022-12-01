@@ -56,27 +56,27 @@ int main(int argc, char **argv)
 
       printf("\n\t\tMatrix - Matrix Multiplication using MPI\n");
 
-      // Print Matrix A
-      printf("\nMatrix A\n\n");
-      for (int i = 0; i < N; i++)
-      {
-         for (int j = 0; j < N; j++)
-         {
-            printf("%.0f\t", matrix_a[i][j]);
-         }
-         printf("\n");
-      }
+      // // Print Matrix A
+      // printf("\nMatrix A\n\n");
+      // for (int i = 0; i < N; i++)
+      // {
+      //    for (int j = 0; j < N; j++)
+      //    {
+      //       printf("%.0f\t", matrix_a[i][j]);
+      //    }
+      //    printf("\n");
+      // }
 
-      // Print Matrix B
-      printf("\nMatrix B\n\n");
-      for (int i = 0; i < N; i++)
-      {
-         for (int j = 0; j < N; j++)
-         {
-            printf("%.0f\t", matrix_b[i][j]);
-         }
-         printf("\n");
-      }
+      // // Print Matrix B
+      // printf("\nMatrix B\n\n");
+      // for (int i = 0; i < N; i++)
+      // {
+      //    for (int j = 0; j < N; j++)
+      //    {
+      //       printf("%.0f\t", matrix_b[i][j]);
+      //    }
+      //    printf("\n");
+      // }
 
       // Determine number of rows of the Matrix A, that is sent to each slave process
       rows = N / slaveTaskCount;
@@ -113,15 +113,15 @@ int main(int argc, char **argv)
          MPI_Recv(&matrix_c[offset][0], rows * N, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
       }
 
-      // Print the result matrix
-      printf("\nResult Matrix C = Matrix A * Matrix B:\n\n");
-      for (int i = 0; i < N; i++)
-      {
-         for (int j = 0; j < N; j++)
-            printf("%.0f\t", matrix_c[i][j]);
-         printf("\n");
-      }
-      printf("\n");
+      // // Print the result matrix
+      // printf("\nResult Matrix C = Matrix A * Matrix B:\n\n");
+      // for (int i = 0; i < N; i++)
+      // {
+      //    for (int j = 0; j < N; j++)
+      //       printf("%.0f\t", matrix_c[i][j]);
+      //    printf("\n");
+      // }
+      // printf("\n");
    }
 
    // Slave Processes
