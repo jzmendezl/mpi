@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+project( blurFaces )
+enable_language(CUDA)
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( blurFaces blurFaces.cu)
+target_link_libraries( blurFaces ${OpenCV_LIBS} )
