@@ -3,6 +3,7 @@
 #include "mpi.h"
 #include <time.h>
 #include <sys/time.h>
+#include <string.h>
 
 /*
   In here 'process o' which distribute the workload to other processes is considered
@@ -11,15 +12,19 @@
 */
 
 // Number of rows and columnns in a matrix
-#define N 2000
+// #define N 2000
 
 MPI_Status status;
 
-// Matrix holders are created
-double matrix_a[N][N], matrix_b[N][N], matrix_c[N][N];
-
 int main(int argc, char **argv)
 {
+   char *size_mat = (char *)malloc(4 * sizeof(char));
+   strcat(size_mat, argv[1]);
+   int N = atoi(size_mat);
+   printf("%d\n", N);
+   // Matrix holders are created
+   double matrix_a[N][N], matrix_b[N][N], matrix_c[N][N];
+
    int processCount, processId, slaveTaskCount, source, dest, rows, offset;
 
    struct timeval start, stop;
