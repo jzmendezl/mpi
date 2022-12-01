@@ -17,7 +17,7 @@
 
 #include <cmath>
 
-#define SOURCEVID "./prueba.mp4"
+#define SOURCEVID "./prueba2.mp4"
 
 #define MASTER 0      /* taskid of first task */
 #define FROM_MASTER 1 /* setting a message type */
@@ -33,6 +33,8 @@ void box_blur(Mat3i frame, Mat outFrame, int r);
 Mat3i sumed_table(Mat3i frame);
 
 CascadeClassifier face_cascade;
+VideoCapture cap;
+VideoWriter video;
 
 using namespace std;
 using namespace cv;
@@ -45,14 +47,6 @@ int main(int argc, char *argv[])
 
     gettimeofday(&ti, NULL); // Instante inicial
 
-    int numtasks, /* number of tasks in partition */
-        taskid,   /* a task identifier */
-        // numworkers, /* number of worker tasks */
-        source,                /* task id of message source */
-        dest,                  /* task id of message destination */
-        averow, extra, offset, /* used to determine rows sent to each worker */
-        i, j, k, rc, error;    /* misc */
-
     String face_cascade_name = "./haarcascade_frontalface_alt.xml";
 
     //-- 1. Load the cascades
@@ -63,7 +57,7 @@ int main(int argc, char *argv[])
     };
 
     // Create a VideoCapture object and use camera to capture the video
-    VideoCapture cap("./prueba.mp4");
+    cap.open(SOURCEVID);
 
     // Check if camera opened successfully
     if (!cap.isOpened())
@@ -71,133 +65,138 @@ int main(int argc, char *argv[])
         cout << "Error opening video stream" << endl;
         return -1;
     }
-
-    // Default resolutions of the frame are obtained.The default resolutions are system dependent.
-    int frame_width = cap.get(CAP_PROP_FRAME_WIDTH);
-    int frame_height = cap.get(CAP_PROP_FRAME_HEIGHT);
-    double fps = cap.get(CAP_PROP_FPS);
-    int TFrames = cap.get(CAP_PROP_FRAME_COUNT);
-
-    // Define the codec and create VideoWriter object.The output is stored in 'outcpp.avi' file.
-    VideoWriter video("video_out.mp4", cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps, Size(frame_width, frame_height));
-
-    MPI_Status status;
-
-    // Initialising MPI
-    if ((error = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
-    {
-        fprintf(stderr, "Failed to initialize MPI\n");
-        return error;
-    }
-    // Initialising MPI Communicator Rank
-    if ((error = MPI_Comm_rank(MPI_COMM_WORLD, &taskid)) != MPI_SUCCESS)
-    {
-        fprintf(stderr, "Failed to initialise MPI communicator group\n");
-        return error;
-    }
-    // Initialising MPI Communicator Size
-    if ((error = MPI_Comm_size(MPI_COMM_WORLD, &numtasks)) != MPI_SUCCESS)
-    {
-        fprintf(stderr, "Failed to initialise MPI communicator size\n");
-        return error;
-    }
-
-    int frames_per_worker = (int)TFrames / numtasks;
-    int start = frames_per_worker * taskid;
-    int end = start + (frames_per_worker - 1);
-    int capacity = end - start + 1;
-
-    if (taskid == (numtasks - 1) && taskid > 1)
-    {
-        end = TFrames-2;
-    }
-    cout << "start " << start << " end " << end << endl;
-
-    vector<Mat> frames((capacity) * sizeof(Mat));
-
-    cap.set(CAP_PROP_POS_FRAMES, (start + 1) * 1.0);
-
-    Mat frame;
-    for (int i = 0; i < end - start + 1; i++)
-    {
-        cap >> frame;
-
-        if (frame.empty())
-        {
-            cout << "No Frame\n";
-            break;
-        }
-        //-- Return a frame whit blur
-        detectAndDisplay(frame, frame_width, frame_height, fps);
-        frames[i] = frame.clone();
-    }
-
-    // Instante final for time
-    gettimeofday(&tf, NULL);
-    tiempo = (tf.tv_sec - ti.tv_sec) * 1000 + (tf.tv_usec - ti.tv_usec) / 1000.0;
-    cout << "El Tiempo que tardo en obtener los frames fue " << tiempo / 60000 << endl;
-
-    gettimeofday(&ti, NULL); // Instante inicial
-    /**************************** master task ************************************/
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    int heigth = frames[0].rows;
-    int width = frames[0].cols;
-    int envios = 0;
-    int recividos = 0;
-
-    /* Measure start time */
-    double start_time = MPI_Wtime();
-
-    if (taskid == MASTER)
-    {
-        printf("mpi_mm has started with %d tasks.\n", numtasks);
-        for (int i = 0; i < TFrames - 1; i++)
-        {
-            cout << i<<endl;
-            if (start <= i && i <= end)
-            {
-                video.write(frames[i]);
-                cout << "i " << i << endl;
-            }
-            else
-            {
-                int size_vector = heigth * width * 3;
-                int node = (int)i / (end - start + 1);
-
-                uchar *frame_to_vector = (uchar *)malloc(size_vector * sizeof(uchar));
-                MPI_Recv(frame_to_vector, size_vector, MPI_UNSIGNED_CHAR, node, 0, MPI_COMM_WORLD, &status);
-                Mat frame_rec = Mat(heigth, width, CV_8UC3, frame_to_vector);
-                video.write(frame_rec);
-
-                // Free Memory
-                free(frame_to_vector);
-            }
-        }
-    }
     else
     {
+        int numtasks, /* number of tasks in partition */
+        taskid,   /* a task identifier */
+        error;  /*error*/
+        MPI_Status status;
 
+        // Initialising MPI
+        if ((error = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "Failed to initialize MPI\n");
+            return error;
+        }
+        // Initialising MPI Communicator Rank
+        if ((error = MPI_Comm_rank(MPI_COMM_WORLD, &taskid)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "Failed to initialise MPI communicator group\n");
+            return error;
+        }
+        // Initialising MPI Communicator Size
+        if ((error = MPI_Comm_size(MPI_COMM_WORLD, &numtasks)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "Failed to initialise MPI communicator size\n");
+            return error;
+        }
+
+        // Default resolutions of the frame are obtained.The default resolutions are system dependent.
+        int frame_width = cap.get(CAP_PROP_FRAME_WIDTH);
+        int frame_height = cap.get(CAP_PROP_FRAME_HEIGHT);
+        double fps = cap.get(CAP_PROP_FPS);
+
+        if (taskid == MASTER)
+        {
+            // Define the codec and create VideoWriter object.The output is stored in 'outcpp.avi' file.
+            video = VideoWriter("video_out.mp4", cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps, Size(frame_width, frame_height));
+        }
+
+        double TFrames = cap.get(CAP_PROP_FRAME_COUNT);
+
+        int frames_per_worker = (int)TFrames / numtasks;
+        int start = frames_per_worker * taskid;
+        int end = start + (frames_per_worker - 1);
+
+        // if (taskid == (numtasks - 1) && taskid > 1)
+        // {
+        //     end = TFrames;
+        // }
+
+        cout << "start " << start << " end " << end << endl;
+
+        vector<Mat> frames((end - start + 1) * sizeof(Mat));
+
+        cap.set(CAP_PROP_POS_FRAMES, (start)*1.0);
+
+        Mat frame;
         for (int i = 0; i < end - start + 1; i++)
         {
-            int size_vector_w = heigth * width * 3;
-            uchar *frame_to_vector = frames[i].data;
-            MPI_Send(frame_to_vector, size_vector_w, MPI_UNSIGNED_CHAR, MASTER, 0, MPI_COMM_WORLD);
+            cap >> frame;
+
+            if (frame.empty())
+            {
+                cout << "No Frame\n";
+                break;
+            }
+            //-- Return a frame whit blur
+            detectAndDisplay(frame, frame_width, frame_height, fps);
+            frames[i] = frame.clone();
         }
+
+        // Instante final for time
+        gettimeofday(&tf, NULL);
+        tiempo = (tf.tv_sec - ti.tv_sec) * 1000 + (tf.tv_usec - ti.tv_usec) / 1000.0;
+        cout << "El Tiempo que tardo en obtener los frames fue " << tiempo / 60000 << endl;
+
+        gettimeofday(&ti, NULL); // Instante inicial
+        /**************************** master task ************************************/
+
+        // MPI_Barrier(MPI_COMM_WORLD);
+
+        int heigth = frames[0].rows;
+        int width = frames[0].cols;
+
+        /* Measure start time */
+        double start_time = MPI_Wtime();
+
+        if (taskid == MASTER)
+        {
+            printf("mpi_mm has started with %d tasks.\n", numtasks);
+            for (int i = 0; i < frames_per_worker * numtasks; i++)
+            {
+                // cout << i<<endl;
+                if (start <= i && i <= end)
+                {
+                    video.write(frames[i]);
+                    // cout << "i " << i << endl;
+                }
+                else
+                {
+                    int size_vector = heigth * width * 3;
+                    int node = (int)i / (end - start + 1);
+
+                    uchar *frame_to_vector = (uchar *)malloc(size_vector * sizeof(uchar));
+                    MPI_Recv(frame_to_vector, size_vector, MPI_UNSIGNED_CHAR, node, 0, MPI_COMM_WORLD, &status);
+                    Mat frame_rec = Mat(heigth, width, CV_8UC3, frame_to_vector);
+                    video.write(frame_rec);
+
+                    // Free Memory
+                    free(frame_to_vector);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < end - start + 1; i++)
+            {
+                int size_vector = heigth * width * 3;
+                uchar *frame_to_vector = frames[i].data;
+                MPI_Send(frame_to_vector, size_vector, MPI_UNSIGNED_CHAR, MASTER, 0, MPI_COMM_WORLD);
+            }
+        }
+        /* Measure start time */
+        double end_time = MPI_Wtime();
+
+        cout << end_time - start_time << endl;
     }
-
-    /* Measure start time */
-    double end_time = MPI_Wtime();
-
-    cout << end_time - start_time << endl;
 
     // Instante final for time
     gettimeofday(&tf, NULL);
     tiempo = (tf.tv_sec - ti.tv_sec) * 1000 + (tf.tv_usec - ti.tv_usec) / 1000.0;
     cout << "El Tiempo que tardo en blur fue " << tiempo / 60000 << endl;
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 }
 
