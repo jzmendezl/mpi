@@ -9,3 +9,5 @@ test2
 video_out.mp4
 video_out2.mp4
 mm
+blur_faces_mpi.cpp
+mmsec
