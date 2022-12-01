@@ -4,7 +4,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
-
 /*
   In here 'process o' which distribute the workload to other processes is considered
   as Root (Master) process and other processes which do the computation is considered
@@ -12,7 +11,7 @@
 */
 
 // Number of rows and columnns in a matrix
-// #define N 2000
+// #define N 4
 
 MPI_Status status;
 
@@ -22,6 +21,7 @@ int main(int argc, char **argv)
    strcat(size_mat, argv[1]);
    int N = atoi(size_mat);
    printf("%d\n", N);
+
    // Matrix holders are created
    double matrix_a[N][N], matrix_b[N][N], matrix_c[N][N];
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
    {
 
       // Matrix A and Matrix B both will be filled with random numbers
-      srand(time(NULL));
+      srand(30);
       for (int i = 0; i < N; i++)
       {
          for (int j = 0; j < N; j++)
@@ -54,25 +54,29 @@ int main(int argc, char **argv)
          }
       }
 
-      //   printf("\n\t\tMatrix - Matrix Multiplication using MPI\n");
+      printf("\n\t\tMatrix - Matrix Multiplication using MPI\n");
 
-      // // Print Matrix A
-      //     printf("\nMatrix A\n\n");
-      //     for (int i = 0; i<N; i++) {
-      //       for (int j = 0; j<N; j++) {
-      //         printf("%.0f\t", matrix_a[i][j]);
-      //       }
-      // 	    printf("\n");
-      //     }
+      // Print Matrix A
+      printf("\nMatrix A\n\n");
+      for (int i = 0; i < N; i++)
+      {
+         for (int j = 0; j < N; j++)
+         {
+            printf("%.0f\t", matrix_a[i][j]);
+         }
+         printf("\n");
+      }
 
-      // // Print Matrix B
-      //     printf("\nMatrix B\n\n");
-      //     for (int i = 0; i<N; i++) {
-      //       for (int j = 0; j<N; j++) {
-      //         printf("%.0f\t", matrix_b[i][j]);
-      //       }
-      // 	    printf("\n");
-      //     }
+      // Print Matrix B
+      printf("\nMatrix B\n\n");
+      for (int i = 0; i < N; i++)
+      {
+         for (int j = 0; j < N; j++)
+         {
+            printf("%.0f\t", matrix_b[i][j]);
+         }
+         printf("\n");
+      }
 
       // Determine number of rows of the Matrix A, that is sent to each slave process
       rows = N / slaveTaskCount;
@@ -110,59 +114,59 @@ int main(int argc, char **argv)
       }
 
       // Print the result matrix
-      //     printf("\nResult Matrix C = Matrix A * Matrix B:\n\n");
-      //     for (int i = 0; i<N; i++) {
-      //       for (int j = 0; j<N; j++)
-      //         printf("%.0f\t", matrix_c[i][j]);
-      //       printf ("\n");
-      //     }
-      //     printf ("\n");
-      //   }
-
-      // Slave Processes
-      if (processId > 0)
+      printf("\nResult Matrix C = Matrix A * Matrix B:\n\n");
+      for (int i = 0; i < N; i++)
       {
+         for (int j = 0; j < N; j++)
+            printf("%.0f\t", matrix_c[i][j]);
+         printf("\n");
+      }
+      printf("\n");
+   }
 
-         // Source process ID is defined
-         source = 0;
+   // Slave Processes
+   if (processId > 0)
+   {
 
-         // Slave process waits for the message buffers with tag 1, that Root process sent
-         // Each process will receive and execute this separately on their processes
+      // Source process ID is defined
+      source = 0;
 
-         // The slave process receives the offset value sent by root process
-         MPI_Recv(&offset, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
-         // The slave process receives number of rows sent by root process
-         MPI_Recv(&rows, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
-         // The slave process receives the sub portion of the Matrix A which assigned by Root
-         MPI_Recv(&matrix_a, rows * N, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
-         // The slave process receives the Matrix B
-         MPI_Recv(&matrix_b, N * N, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+      // Slave process waits for the message buffers with tag 1, that Root process sent
+      // Each process will receive and execute this separately on their processes
 
-         // Matrix multiplication
+      // The slave process receives the offset value sent by root process
+      MPI_Recv(&offset, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+      // The slave process receives number of rows sent by root process
+      MPI_Recv(&rows, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+      // The slave process receives the sub portion of the Matrix A which assigned by Root
+      MPI_Recv(&matrix_a, rows * N, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+      // The slave process receives the Matrix B
+      MPI_Recv(&matrix_b, N * N, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
 
-         for (int k = 0; k < N; k++)
+      // Matrix multiplication
+
+      for (int k = 0; k < N; k++)
+      {
+         for (int i = 0; i < rows; i++)
          {
-            for (int i = 0; i < rows; i++)
-            {
-               // Set initial value of the row summataion
-               matrix_c[i][k] = 0.0;
-               // Matrix A's element(i, j) will be multiplied with Matrix B's element(j, k)
-               for (int j = 0; j < N; j++)
-                  matrix_c[i][k] = matrix_c[i][k] + matrix_a[i][j] * matrix_b[j][k];
-            }
+            // Set initial value of the row summataion
+            matrix_c[i][k] = 0.0;
+            // Matrix A's element(i, j) will be multiplied with Matrix B's element(j, k)
+            for (int j = 0; j < N; j++)
+               matrix_c[i][k] = matrix_c[i][k] + matrix_a[i][j] * matrix_b[j][k];
          }
-
-         // Calculated result will be sent back to Root process (process 0) with message tag 2
-
-         // Offset will be sent to Root, which determines the starting point of the calculated
-         // value in matrix C
-         MPI_Send(&offset, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
-         // Number of rows the process calculated will be sent to root process
-         MPI_Send(&rows, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
-         // Resulting matrix with calculated rows will be sent to root process
-         MPI_Send(&matrix_c, rows * N, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
       }
 
-      MPI_Finalize();
+      // Calculated result will be sent back to Root process (process 0) with message tag 2
+
+      // Offset will be sent to Root, which determines the starting point of the calculated
+      // value in matrix C
+      MPI_Send(&offset, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
+      // Number of rows the process calculated will be sent to root process
+      MPI_Send(&rows, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
+      // Resulting matrix with calculated rows will be sent to root process
+      MPI_Send(&matrix_c, rows * N, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
    }
+
+   MPI_Finalize();
 }
